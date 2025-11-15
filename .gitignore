@@ -1,2 +1,3 @@
 Base_Videos_Final.csv
-.venv/
+Base_Videos_Clean.csv
+.env/
