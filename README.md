@@ -4,7 +4,7 @@ Este proyecto es una solución integral de **Machine Learning** diseñada para p
 
 ## 🎯 Objetivo del Proyecto
 
-El objetivo principal es responder a la pregunta: **¿Quién tiene más probabilidad de ganar el torneo basándose en su rendimiento físico real?**
+El objetivo principal es responder a la pregunta: **¿Quién tiene más probabilidad de ganar el torneo basándose en su rendimiento dentro y fuera de la cancha?**
 
 A diferencia de los rankings tradicionales basados solo en puntos pasados, este sistema analiza la "calidad de juego" objetiva extraída de video:
 *   **Velocidad y Aceleración:** ¿Qué tan rápido se mueve el jugador?
