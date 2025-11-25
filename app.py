@@ -91,7 +91,7 @@ def crear_grafico_radar(equipo1_data, equipo2_data, equipo1_nombre, equipo2_nomb
         'Tiempo Cerca Pelota (%)',
         'Tiempo Zona Ofensiva (%)',
         'Aceleración Media (m/s²)',
-        'Tasa Victoria Histórica'
+        'Distancia Total (m)'
     ]
     
     # Función para normalizar valores a escala 0-100
@@ -201,8 +201,7 @@ def predecir_partido(equipo1_data, equipo2_data, modelo_data):
         'Tiempo Cerca Pelota (%)': 'pct_frames_cerca_pelota_equipo',
         'Distancia Total (m)': 'distancia_total_equipo_m',
         'Aceleración Media (m/s²)': 'aceleracion_media_mps2',
-        'Tiempo Zona Ofensiva (%)': 'pct_tiempo_zona_ofensiva',
-        'Tasa Victoria Histórica': 'tasa_victoria_historica'
+        'Tiempo Zona Ofensiva (%)': 'pct_tiempo_zona_ofensiva'
     }
     
     def get_feature(row, feature):
@@ -299,7 +298,7 @@ if tabla_posiciones is None or stats_equipos is None or modelo_data is None:
 # Mostrar métricas del modelo en el sidebar
 with st.sidebar:
     st.header("📊 Info del Modelo")
-    st.metric("Tipo de Modelo", modelo_data['model_type'])
+    st.metric("Tipo de Modelo", "Logistic Regression")
     st.metric("ROC-AUC", f"{modelo_data['metrics']['roc_auc']:.3f}")
     st.metric("Accuracy", f"{modelo_data['metrics']['accuracy']:.3f}")
     st.metric("F1-Score", f"{modelo_data['metrics']['f1_score']:.3f}")
@@ -351,7 +350,6 @@ with tab1:
         # Formatear probabilidades como porcentajes
         tabla_display = tabla_filtrada.copy()
         tabla_display['Prob. Victoria'] = tabla_display['Prob. Victoria'].apply(lambda x: f"{x*100:.2f}%")
-        tabla_display['Tasa Victoria Histórica'] = tabla_display['Tasa Victoria Histórica'].apply(lambda x: f"{x*100:.2f}%")
         
         st.dataframe(
             tabla_display,
@@ -403,7 +401,6 @@ with tab1:
         with col1:
             ranking_display = ranking_jugadores.head(30).copy()
             ranking_display['Score Promedio'] = ranking_display['Score Promedio'].apply(lambda x: f"{x*100:.2f}%")
-            ranking_display['Mejor Score'] = ranking_display['Mejor Score'].apply(lambda x: f"{x*100:.2f}%")
             
             st.dataframe(
                 ranking_display,
@@ -477,7 +474,6 @@ with tab2:
                 st.write(f"**Distancia Total:** {datos_a['Distancia Total (m)']:.0f} m")
                 st.write(f"**Aceleración Media:** {datos_a['Aceleración Media (m/s²)']:.3f} m/s²")
                 st.write(f"**Tiempo Zona Ofensiva:** {datos_a['Tiempo Zona Ofensiva (%)']*100:.1f}%")
-                st.write(f"**Tasa Victoria Histórica:** {datos_a['Tasa Victoria Histórica']*100:.1f}%")
     
     with col2:
         st.subheader("🔴 Equipo B")
@@ -504,7 +500,6 @@ with tab2:
                 st.write(f"**Distancia Total:** {datos_b['Distancia Total (m)']:.0f} m")
                 st.write(f"**Aceleración Media:** {datos_b['Aceleración Media (m/s²)']:.3f} m/s²")
                 st.write(f"**Tiempo Zona Ofensiva:** {datos_b['Tiempo Zona Ofensiva (%)']*100:.1f}%")
-                st.write(f"**Tasa Victoria Histórica:** {datos_b['Tasa Victoria Histórica']*100:.1f}%")
     
     st.divider()
     
@@ -730,7 +725,7 @@ with tab3:
                     with st.expander("ℹ️ Más información sobre la predicción"):
                         st.markdown(f"""
                         **Sobre el Modelo:**
-                        - Tipo: {modelo_data['model_type']}
+                        - Tipo: Logistic Regression
                         - ROC-AUC: {modelo_data['metrics']['roc_auc']:.3f}
                         - Accuracy: {modelo_data['metrics']['accuracy']:.3f}
                         - Features utilizadas: {len(modelo_data['features'])}
@@ -762,7 +757,7 @@ with col1:
 
 with col2:
     st.markdown("**🤖 Modelo:**")
-    st.markdown(f"- {modelo_data['model_type']}")
+    st.markdown("- Logistic Regression")
     st.markdown(f"- ROC-AUC: {modelo_data['metrics']['roc_auc']:.3f}")
 
 with col3:
