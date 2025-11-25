@@ -315,10 +315,11 @@ with st.sidebar:
 # TABS PRINCIPALES
 # ============================================================================
 
-tab1, tab2, tab3 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "🏆 Ranking Global", 
     "⚡ Face-to-Face (Radar)", 
-    "🎯 Simulador de Predicción"
+    "🎯 Simulador de Predicción",
+    "🔍 Análisis de Factores de Éxito"
 ])
 
 # ============================================================================
@@ -740,6 +741,241 @@ with tab3:
                 except Exception as e:
                     st.error(f"❌ Error al realizar la predicción: {str(e)}")
                     st.info("Asegúrate de que los archivos de datos estén correctamente formateados.")
+
+# ============================================================================
+# TAB 4: ANÁLISIS DE FACTORES DE ÉXITO
+# ============================================================================
+
+with tab4:
+    st.header("🔍 Análisis: ¿Por qué unos equipos ganan más que otros?")
+    
+    st.markdown("""
+    Esta sección analiza las **características que diferencian a los mejores equipos** de los equipos con menor rendimiento,
+    ayudándote a entender qué factores son más importantes para la victoria.
+    """)
+    
+    # Cargar stats_equipos para análisis
+    if stats_equipos is not None and len(stats_equipos) > 0:
+        
+        # Dividir en top y bottom performers
+        top_percentile = 20  # Top 20%
+        bottom_percentile = 20  # Bottom 20%
+        
+        top_n = max(1, int(len(stats_equipos) * top_percentile / 100))
+        bottom_n = max(1, int(len(stats_equipos) * bottom_percentile / 100))
+        
+        top_equipos = stats_equipos.head(top_n)
+        bottom_equipos = stats_equipos.tail(bottom_n)
+        
+        # Métricas clave para comparar
+        metricas_comparacion = {
+            'Velocidad Media (m/s)': 'Velocidad de desplazamiento promedio',
+            'Golpes Totales': 'Cantidad total de golpes',
+            'Tiempo Cerca Pelota (%)': 'Porcentaje del tiempo cerca de la pelota',
+            'Distancia Total (m)': 'Distancia total recorrida',
+            'Aceleración Media (m/s²)': 'Capacidad de aceleración',
+            'Tiempo Zona Ofensiva (%)': 'Tiempo en posición ofensiva'
+        }
+        
+        # ====================================================================
+        # 1. COMPARACIÓN DE PROMEDIOS
+        # ====================================================================
+        st.subheader("📊 Comparación de Métricas: Top 20% vs Bottom 20%")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(f"### 🥇 Top {top_percentile}% Mejores Equipos")
+            st.metric("Equipos", top_n)
+            st.metric("Probabilidad Promedio", f"{top_equipos['Prob. Victoria'].mean():.1%}")
+        
+        with col2:
+            st.markdown(f"### 📉 Bottom {bottom_percentile}% Equipos")
+            st.metric("Equipos", bottom_n)
+            st.metric("Probabilidad Promedio", f"{bottom_equipos['Prob. Victoria'].mean():.1%}")
+        
+        st.divider()
+        
+        # ====================================================================
+        # 2. ANÁLISIS MÉTRICA POR MÉTRICA
+        # ====================================================================
+        st.subheader("🎯 Diferencias Clave en el Rendimiento")
+        
+        # Calcular diferencias
+        diferencias = []
+        for metrica, descripcion in metricas_comparacion.items():
+            if metrica in top_equipos.columns and metrica in bottom_equipos.columns:
+                top_mean = top_equipos[metrica].mean()
+                bottom_mean = bottom_equipos[metrica].mean()
+                diff_absoluta = top_mean - bottom_mean
+                diff_porcentual = ((top_mean - bottom_mean) / bottom_mean * 100) if bottom_mean != 0 else 0
+                
+                diferencias.append({
+                    'Métrica': metrica,
+                    'Descripción': descripcion,
+                    'Top 20%': top_mean,
+                    'Bottom 20%': bottom_mean,
+                    'Diferencia': diff_absoluta,
+                    'Diferencia %': diff_porcentual
+                })
+        
+        df_diferencias = pd.DataFrame(diferencias)
+        df_diferencias = df_diferencias.sort_values('Diferencia %', key=lambda x: abs(x), ascending=False)
+        
+        # Mostrar las 3 métricas más importantes
+        st.markdown("### 🔥 Top 3 Factores Más Diferenciales")
+        
+        for idx, row in df_diferencias.head(3).iterrows():
+            with st.container():
+                col1, col2, col3 = st.columns([2, 1, 1])
+                
+                with col1:
+                    st.markdown(f"**{row['Métrica']}**")
+                    st.caption(row['Descripción'])
+                
+                with col2:
+                    st.metric(
+                        "Top 20%", 
+                        f"{row['Top 20%']:.2f}",
+                        delta=f"{row['Diferencia %']:+.1f}%"
+                    )
+                
+                with col3:
+                    st.metric(
+                        "Bottom 20%", 
+                        f"{row['Bottom 20%']:.2f}"
+                    )
+                
+                # Interpretación
+                if row['Diferencia %'] > 0:
+                    st.success(f"✅ Los mejores equipos tienen un **{abs(row['Diferencia %']):.1f}% MÁS** en esta métrica")
+                else:
+                    st.info(f"ℹ️ Los mejores equipos tienen un **{abs(row['Diferencia %']):.1f}% MENOS** en esta métrica")
+                
+                st.divider()
+        
+        # ====================================================================
+        # 3. GRÁFICO COMPARATIVO
+        # ====================================================================
+        st.subheader("📈 Visualización Comparativa")
+        
+        # Crear gráfico de barras comparativo
+        fig_comparacion = go.Figure()
+        
+        metricas_plot = [row['Métrica'] for _, row in df_diferencias.iterrows()]
+        
+        # Normalizar valores para mejor visualización (0-100)
+        top_values_norm = []
+        bottom_values_norm = []
+        
+        for metrica in metricas_plot:
+            row = df_diferencias[df_diferencias['Métrica'] == metrica].iloc[0]
+            max_val = max(row['Top 20%'], row['Bottom 20%'])
+            min_val = min(row['Top 20%'], row['Bottom 20%'])
+            rango = max_val - min_val if max_val != min_val else 1
+            
+            top_norm = ((row['Top 20%'] - min_val) / rango) * 100
+            bottom_norm = ((row['Bottom 20%'] - min_val) / rango) * 100
+            
+            top_values_norm.append(top_norm)
+            bottom_values_norm.append(bottom_norm)
+        
+        fig_comparacion.add_trace(go.Bar(
+            name=f'Top {top_percentile}%',
+            y=metricas_plot,
+            x=top_values_norm,
+            orientation='h',
+            marker=dict(color='#28a745'),
+            text=[f"{v:.1f}" for v in top_values_norm],
+            textposition='outside'
+        ))
+        
+        fig_comparacion.add_trace(go.Bar(
+            name=f'Bottom {bottom_percentile}%',
+            y=metricas_plot,
+            x=bottom_values_norm,
+            orientation='h',
+            marker=dict(color='#dc3545'),
+            text=[f"{v:.1f}" for v in bottom_values_norm],
+            textposition='outside'
+        ))
+        
+        fig_comparacion.update_layout(
+            title='Comparación Normalizada de Métricas (0-100)',
+            xaxis_title='Puntuación Normalizada',
+            yaxis_title='',
+            barmode='group',
+            height=400,
+            showlegend=True,
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
+        )
+        
+        st.plotly_chart(fig_comparacion, use_container_width=True)
+        
+        # ====================================================================
+        # 4. CONCLUSIONES Y RECOMENDACIONES
+        # ====================================================================
+        st.subheader("💡 Conclusiones y Recomendaciones")
+        
+        # Identificar la métrica más importante
+        metrica_mas_importante = df_diferencias.iloc[0]
+        
+        st.markdown(f"""
+        ### Factores Clave del Éxito
+        
+        Basado en el análisis de **{len(stats_equipos)} equipos**, hemos identificado los siguientes patrones:
+        
+        **🎯 Factor #1: {metrica_mas_importante['Métrica']}**
+        - Los equipos del top 20% tienen un **{abs(metrica_mas_importante['Diferencia %']):.1f}%** 
+          {"más" if metrica_mas_importante['Diferencia %'] > 0 else "menos"} que los equipos del bottom 20%
+        - Promedio top: **{metrica_mas_importante['Top 20%']:.2f}**
+        - Promedio bottom: **{metrica_mas_importante['Bottom 20%']:.2f}**
+        
+        ### 📋 Recomendaciones para Mejorar
+        """)
+        
+        # Generar recomendaciones basadas en las métricas
+        recomendaciones = []
+        
+        for _, row in df_diferencias.head(3).iterrows():
+            if 'Velocidad' in row['Métrica'] and row['Diferencia %'] > 0:
+                recomendaciones.append("🏃 **Trabaja en la velocidad de desplazamiento**: Los equipos ganadores se mueven más rápido en la cancha")
+            elif 'Golpes' in row['Métrica'] and row['Diferencia %'] > 0:
+                recomendaciones.append("🎾 **Aumenta la agresividad ofensiva**: Más golpes generalmente indican mayor control del juego")
+            elif 'Cerca Pelota' in row['Métrica'] and row['Diferencia %'] > 0:
+                recomendaciones.append("🎯 **Mejora el posicionamiento**: Estar cerca de la pelota es clave para anticipar jugadas")
+            elif 'Distancia Total' in row['Métrica'] and row['Diferencia %'] > 0:
+                recomendaciones.append("💪 **Incrementa la resistencia física**: Los mejores equipos recorren más distancia")
+            elif 'Aceleración' in row['Métrica'] and abs(row['Diferencia %']) > 5:
+                recomendaciones.append("⚡ **Desarrolla explosividad**: La capacidad de acelerar rápidamente marca diferencias")
+            elif 'Zona Ofensiva' in row['Métrica'] and row['Diferencia %'] > 0:
+                recomendaciones.append("⚔️ **Mantén presión ofensiva**: Pasar más tiempo en zona ofensiva aumenta probabilidad de victoria")
+        
+        for i, rec in enumerate(recomendaciones[:4], 1):
+            st.markdown(f"{i}. {rec}")
+        
+        # Mostrar tabla completa
+        with st.expander("📊 Ver Tabla Completa de Comparación"):
+            st.dataframe(
+                df_diferencias.style.format({
+                    'Top 20%': '{:.2f}',
+                    'Bottom 20%': '{:.2f}',
+                    'Diferencia': '{:.2f}',
+                    'Diferencia %': '{:+.1f}%'
+                }),
+                use_container_width=True,
+                height=400
+            )
+    
+    else:
+        st.warning("⚠️ No hay datos suficientes para realizar el análisis comparativo.")
+        st.info("Asegúrate de que el archivo 'stats_equipos.csv' esté disponible y contenga datos.")
 
 # ============================================================================
 # FOOTER
