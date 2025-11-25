@@ -1,2 +1,5 @@
 Base_Videos_Final.csv
 .venv/
+*.csv
+data_export/
+venv
